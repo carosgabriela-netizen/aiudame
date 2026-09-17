@@ -146,3 +146,27 @@
     color: var(--color-foreground);
   }
 }
+
+@utility marca-degradado {
+  background-image: var(--gradient-marca);
+}
+
+@utility tarjeta {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--sombra-tarjeta);
+}
+
+@utility boton-primario {
+  background-image: var(--gradient-marca);
+  color: var(--color-primary-foreground);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--sombra-suave);
+  font-weight: 600;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+@utility boton-primario-activo {
+  filter: brightness(1.05);
+}
