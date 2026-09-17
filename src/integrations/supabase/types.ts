@@ -14,7 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      consultas: {
+        Row: {
+          area: string
+          created_at: string
+          estrategia: string | null
+          grado: string
+          id: string
+          nivel: string
+          pistas: Json
+          pregunta: string
+        }
+        Insert: {
+          area: string
+          created_at?: string
+          estrategia?: string | null
+          grado: string
+          id?: string
+          nivel: string
+          pistas?: Json
+          pregunta: string
+        }
+        Update: {
+          area?: string
+          created_at?: string
+          estrategia?: string | null
+          grado?: string
+          id?: string
+          nivel?: string
+          pistas?: Json
+          pregunta?: string
+        }
+        Relationships: []
+      }
+      recursos_ministerio: {
+        Row: {
+          archivo_url: string | null
+          area: string | null
+          contenido: string | null
+          created_at: string
+          fuente: string | null
+          grado: string | null
+          id: string
+          nivel: string
+          titulo: string
+        }
+        Insert: {
+          archivo_url?: string | null
+          area?: string | null
+          contenido?: string | null
+          created_at?: string
+          fuente?: string | null
+          grado?: string | null
+          id?: string
+          nivel?: string
+          titulo: string
+        }
+        Update: {
+          archivo_url?: string | null
+          area?: string | null
+          contenido?: string | null
+          created_at?: string
+          fuente?: string | null
+          grado?: string | null
+          id?: string
+          nivel?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
