@@ -29,7 +29,6 @@ export const Route = createFileRoute("/recursos")({
 function Recursos() {
   const qc = useQueryClient();
   const [titulo, setTitulo] = useState("");
-  const [nivel, setNivel] = useState<"primaria" | "secundaria" | "ambos">("ambos");
   const [grado, setGrado] = useState("");
   const [area, setArea] = useState<string>(AREAS[0]);
   const [contenido, setContenido] = useState("");
@@ -58,7 +57,7 @@ function Recursos() {
       }
       const { error } = await supabase.from("recursos_ministerio").insert({
         titulo: titulo || archivo?.name || "Material del Ministerio",
-        nivel,
+        nivel: "secundaria",
         grado: grado || null,
         area,
         contenido: contenido || null,
@@ -80,7 +79,7 @@ function Recursos() {
     qc.invalidateQueries({ queryKey: ["recursos"] });
   };
 
-  const grados = nivel === "ambos" ? [...GRADOS.primaria, ...GRADOS.secundaria] : [...GRADOS[nivel]];
+  const grados = [...GRADOS];
 
   return (
     <AppShell>
@@ -100,26 +99,6 @@ function Recursos() {
             className="rounded-lg border border-input bg-card px-3 py-2.5 text-sm"
           />
         </label>
-
-        <div className="grid grid-cols-3 gap-2">
-          {(["primaria", "secundaria", "ambos"] as const).map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => {
-                setNivel(n);
-                setGrado("");
-              }}
-              className={
-                nivel === n
-                  ? "boton-primario px-2 py-2 text-xs capitalize"
-                  : "rounded-lg border border-border bg-secondary px-2 py-2 text-xs font-medium text-secondary-foreground capitalize"
-              }
-            >
-              {n}
-            </button>
-          ))}
-        </div>
 
         <label className="grid gap-1.5">
           <span className="text-xs font-semibold text-muted-foreground">Grado (opcional)</span>
@@ -201,7 +180,7 @@ function Recursos() {
             <div>
               <p className="text-sm font-semibold">{r.titulo}</p>
               <p className="text-[11px] text-muted-foreground">
-                {r.nivel} · {r.grado ?? "todos los grados"} · {r.area ?? "área general"}
+                {r.grado ?? "todos los grados"} · {r.area ?? "área general"}
               </p>
             </div>
             <button type="button" onClick={() => borrar(r.id)} className="text-destructive">

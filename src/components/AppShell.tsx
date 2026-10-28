@@ -44,10 +44,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 }
 
-export const GRADOS = {
-  primaria: ["1° primaria", "2° primaria", "3° primaria", "4° primaria", "5° primaria", "6° primaria"],
-  secundaria: ["1° secundaria", "2° secundaria", "3° secundaria", "4° secundaria", "5° secundaria"],
-} as const;
+export const GRADOS = [
+  "1° secundaria",
+  "2° secundaria",
+  "3° secundaria",
+  "4° secundaria",
+  "5° secundaria",
+] as const;
 
 export const AREAS = [
   "Matemática",

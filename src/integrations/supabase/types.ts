@@ -24,6 +24,8 @@ export type Database = {
           nivel: string
           pistas: Json
           pregunta: string
+          usuario_dni: string | null
+          usuario_nombre: string | null
         }
         Insert: {
           area: string
@@ -34,6 +36,8 @@ export type Database = {
           nivel: string
           pistas?: Json
           pregunta: string
+          usuario_dni?: string | null
+          usuario_nombre?: string | null
         }
         Update: {
           area?: string
@@ -44,6 +48,8 @@ export type Database = {
           nivel?: string
           pistas?: Json
           pregunta?: string
+          usuario_dni?: string | null
+          usuario_nombre?: string | null
         }
         Relationships: []
       }

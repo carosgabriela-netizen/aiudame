@@ -3,7 +3,6 @@ import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 
 const Entrada = z.object({
-  nivel: z.enum(["primaria", "secundaria"]),
   grado: z.string().min(1),
   area: z.string().min(1),
   pregunta: z.string().min(3).max(2000),
@@ -33,22 +32,14 @@ const esquemaPistas = {
   required: ["estrategia", "pistas", "pregunta_reflexion"],
 } as const;
 
-function instruccionesPor(nivel: "primaria" | "secundaria", grado: string, area: string) {
-  const base = `Eres el asistente pedagógico de la I.E. Peruano Suizo (Perú). Tu regla absoluta e inviolable: NUNCA das la respuesta final, ni el resultado numérico, ni la palabra exacta, ni la conclusión. Solo das PISTAS que guían al estudiante a descubrirla por sí mismo.
+function instruccionesPor(grado: string, area: string) {
+  return `Eres el asistente pedagógico de la I.E. Peruano Suizo (Perú). Tu regla absoluta e inviolable: NUNCA das la respuesta final, ni el resultado numérico, ni la palabra exacta, ni la conclusión. Solo das PISTAS que guían al estudiante a descubrirla por sí mismo.
 
 Debes basarte siempre en el Currículo Nacional del Ministerio de Educación del Perú y en los recursos de materialeducativoperu.com que se te entregan como contexto. Si el contexto entregado cubre el tema, prioriza su enfoque, vocabulario y competencias por encima de cualquier otra fuente. La precisión pedagógica y curricular está por encima de la creatividad.
 
-Área: ${area}. Grado: ${grado}.
+Área: ${area}. Grado: ${grado} (nivel secundaria).
 
-Entrega entre 3 y 5 pistas, ordenadas de la más general a la más cercana a la respuesta (escalera de andamiaje). Cada pista tiene un título corto y un texto. La última pista deja al estudiante a un paso de resolverlo, pero jamás lo resuelve. Nunca incluyas la respuesta escondida, ni en ejemplos, ni entre paréntesis.`;
-
-  if (nivel === "primaria") {
-    return `${base}
-
-TONO PARA PRIMARIA: frases muy cortas y cálidas, lenguaje concreto y cotidiano (juguetes, frutas, salón, familia), ejemplos visuales y manipulables, cero tecnicismos. Usa "tú" y un emoji como máximo por pista. Cada pista con máximo 2 oraciones sencillas. Invita a dibujar, contar con los dedos, usar objetos.`;
-  }
-
-  return `${base}
+Entrega entre 3 y 5 pistas, ordenadas de la más general a la más cercana a la respuesta (escalera de andamiaje). Cada pista tiene un título corto y un texto. La última pista deja al estudiante a un paso de resolverlo, pero jamás lo resuelve. Nunca incluyas la respuesta escondida, ni en ejemplos, ni entre paréntesis.
 
 TONO PARA SECUNDARIA: lenguaje académico accesible propio de la edad, usa el vocabulario técnico correcto del área y explícalo brevemente. Promueve el razonamiento: pedir identificar datos, formular hipótesis, justificar con evidencia, revisar el procedimiento y verificar el resultado. Sin infantilizar, sin emojis, pistas de 2 a 4 oraciones con precisión conceptual.`;
 }
@@ -71,7 +62,7 @@ export const generarPistas = createServerFn({ method: "POST" })
       const { data: recursos } = await supabase
         .from("recursos_ministerio")
         .select("titulo, nivel, grado, area, fuente, contenido")
-        .in("nivel", [data.nivel, "ambos"])
+        .in("nivel", ["secundaria", "ambos"])
         .order("created_at", { ascending: false })
         .limit(12);
 
@@ -85,7 +76,7 @@ export const generarPistas = createServerFn({ method: "POST" })
       }
     }
 
-    const entradaUsuario = `Pregunta del estudiante (${data.nivel}, ${data.grado}, ${data.area}):\n"${data.pregunta}"\n\nRecursos curriculares del Ministerio disponibles:\n${contexto || "(Sin material cargado todavía: apóyate estrictamente en el Currículo Nacional del Perú y en el enfoque de materialeducativoperu.com para este grado y área.)"}\n\nDevuelve la respuesta en formato json con estrategia, pistas y pregunta_reflexion. Recuerda: pistas, nunca la respuesta.`;
+    const entradaUsuario = `Pregunta del estudiante (secundaria, ${data.grado}, ${data.area}):\n"${data.pregunta}"\n\nRecursos curriculares del Ministerio disponibles:\n${contexto || "(Sin material cargado todavía: apóyate estrictamente en el Currículo Nacional del Perú y en el enfoque de materialeducativoperu.com para este grado y área.)"}\n\nDevuelve la respuesta en formato json con estrategia, pistas y pregunta_reflexion. Recuerda: pistas, nunca la respuesta.`;
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
       method: "POST",
@@ -98,7 +89,7 @@ export const generarPistas = createServerFn({ method: "POST" })
         model: "openai/gpt-6-astra",
         stream: true,
         reasoning: { effort: "low", summary: "auto" },
-        instructions: instruccionesPor(data.nivel, data.grado, data.area),
+        instructions: instruccionesPor(data.grado, data.area),
         input: [{ role: "user", content: [{ type: "input_text", text: entradaUsuario }] }],
         text: {
           format: {
