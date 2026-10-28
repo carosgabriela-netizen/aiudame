@@ -1,11 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
-import { Sparkles, ChevronRight, Loader2, AlertCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Sparkles, ChevronRight, Loader2, AlertCircle, LogOut, IdCard } from "lucide-react";
 import { AppShell, AREAS, GRADOS } from "@/components/AppShell";
 import { generarPistas } from "@/lib/pistas.functions";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  leerIdentidad,
+  guardarIdentidad,
+  borrarIdentidad,
+  etiquetaIdentidad,
+  type Identidad,
+} from "@/lib/identidad";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -14,12 +21,12 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Asistente con inteligencia artificial de la I.E. Peruano Suizo: entrega de 3 a 5 pistas por pregunta, adaptadas a primaria y secundaria según el currículo del Ministerio.",
+          "Asistente con inteligencia artificial de la I.E. Peruano Suizo para secundaria: entrega de 3 a 5 pistas por pregunta, adaptadas al grado y área según el currículo del Ministerio.",
       },
       { property: "og:title", content: "Pistas de aprendizaje | I.E. Peruano Suizo" },
       {
         property: "og:description",
-        content: "Pistas guiadas, nunca la respuesta: aprendizaje acompañado para primaria y secundaria.",
+        content: "Pistas guiadas, nunca la respuesta: aprendizaje acompañado para secundaria.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -28,67 +35,166 @@ export const Route = createFileRoute("/")({
   component: Inicio,
 });
 
-type Nivel = "primaria" | "secundaria";
+type Pista = { titulo: string; texto: string };
+
+function Ingreso({ onListo }: { onListo: (i: Identidad) => void }) {
+  const [modo, setModo] = useState<"dni" | "nombre">("dni");
+  const [dni, setDni] = useState("");
+  const [nombre, setNombre] = useState("");
+
+  const dniValido = /^\d{8}$/.test(dni.trim());
+  const nombreValido = nombre.trim().length >= 2;
+
+  const entrar = () => {
+    const identidad: Identidad =
+      modo === "dni" ? { dni: dni.trim(), nombre: null } : { dni: null, nombre: nombre.trim() };
+    guardarIdentidad(identidad);
+    onListo(identidad);
+  };
+
+  return (
+    <section className="tarjeta mt-2 grid gap-3 p-5">
+      <div className="flex items-center gap-2">
+        <span className="marca-degradado flex size-9 items-center justify-center rounded-full text-primary-foreground">
+          <IdCard className="size-4" />
+        </span>
+        <div>
+          <h2 className="text-sm font-bold">Ingresa para empezar</h2>
+          <p className="text-xs text-muted-foreground">
+            Así se guarda quién hizo cada consulta en el historial.
+          </p>
+        </div>
+      </div>
+
+      {modo === "dni" ? (
+        <>
+          <label className="grid gap-1.5">
+            <span className="text-xs font-semibold text-muted-foreground">Tu DNI (8 dígitos)</span>
+            <input
+              value={dni}
+              onChange={(e) => setDni(e.target.value.replace(/\D/g, "").slice(0, 8))}
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="12345678"
+              className="rounded-lg border border-input bg-card px-3 py-2.5 text-sm tracking-widest"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={!dniValido}
+            onClick={entrar}
+            className="boton-primario flex items-center justify-center gap-2 px-4 py-3 text-sm disabled:opacity-50"
+          >
+            Ingresar
+          </button>
+          <button
+            type="button"
+            onClick={() => setModo("nombre")}
+            className="text-xs font-semibold text-primary underline underline-offset-2"
+          >
+            No sé mi DNI — ingresar solo con mi nombre
+          </button>
+        </>
+      ) : (
+        <>
+          <label className="grid gap-1.5">
+            <span className="text-xs font-semibold text-muted-foreground">Tu nombre</span>
+            <input
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              autoComplete="off"
+              placeholder="Ejemplo: Carlos"
+              className="rounded-lg border border-input bg-card px-3 py-2.5 text-sm"
+            />
+            <span className="text-[11px] text-muted-foreground">
+              Solo tu nombre, sin apellidos.
+            </span>
+          </label>
+          <button
+            type="button"
+            disabled={!nombreValido}
+            onClick={entrar}
+            className="boton-primario flex items-center justify-center gap-2 px-4 py-3 text-sm disabled:opacity-50"
+          >
+            Entrar con mi nombre
+          </button>
+          <button
+            type="button"
+            onClick={() => setModo("dni")}
+            className="text-xs font-semibold text-primary underline underline-offset-2"
+          >
+            Prefiero poner mi DNI
+          </button>
+        </>
+      )}
+    </section>
+  );
+}
 
 function Inicio() {
-  const [nivel, setNivel] = useState<Nivel>("primaria");
-  const [grado, setGrado] = useState<string>(GRADOS.primaria[0]);
+  const [identidad, setIdentidad] = useState<Identidad | null>(null);
+  const [cargado, setCargado] = useState(false);
+  const [grado, setGrado] = useState<string>(GRADOS[0]);
   const [area, setArea] = useState<string>(AREAS[0]);
   const [pregunta, setPregunta] = useState("");
   const [visibles, setVisibles] = useState(1);
+
+  useEffect(() => {
+    setIdentidad(leerIdentidad());
+    setCargado(true);
+  }, []);
 
   const pedirPistas = useServerFn(generarPistas);
 
   const mutacion = useMutation({
     mutationFn: async () => {
-      const resultado = await pedirPistas({ data: { nivel, grado, area, pregunta } });
+      const resultado = await pedirPistas({ data: { grado, area, pregunta } });
       await supabase.from("consultas").insert({
-        nivel,
         grado,
         area,
         pregunta,
         pistas: resultado.pistas,
         estrategia: resultado.estrategia,
+        usuario_dni: identidad?.dni ?? null,
+        usuario_nombre: identidad?.nombre ?? null,
       });
       return resultado;
     },
     onMutate: () => setVisibles(1),
   });
 
-  const cambiarNivel = (nuevo: Nivel) => {
-    setNivel(nuevo);
-    setGrado(GRADOS[nuevo][0]);
-  };
-
   const resultado = mutacion.data;
+
+  if (cargado && !identidad) {
+    return (
+      <AppShell>
+        <Ingreso onListo={setIdentidad} />
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
-      <section className="tarjeta p-4">
-        <p className="text-xs font-semibold text-muted-foreground">Nivel escolar</p>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          {(["primaria", "secundaria"] as const).map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => cambiarNivel(n)}
-              className={
-                nivel === n
-                  ? "boton-primario px-3 py-2.5 text-sm capitalize"
-                  : "rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm font-medium text-secondary-foreground capitalize"
-              }
-            >
-              {n}
-            </button>
-          ))}
+      {identidad && (
+        <div className="mb-3 flex items-center justify-between rounded-lg border border-border bg-secondary px-3 py-2">
+          <p className="text-xs font-semibold text-secondary-foreground">
+            Hola, {etiquetaIdentidad(identidad)}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              borrarIdentidad();
+              setIdentidad(null);
+            }}
+            className="flex items-center gap-1 text-xs font-semibold text-primary"
+          >
+            <LogOut className="size-3.5" /> Salir
+          </button>
         </div>
-        <p className="mt-2 text-[11px] text-muted-foreground">
-          {nivel === "primaria"
-            ? "Pistas cortas, con ejemplos concretos y palabras sencillas."
-            : "Pistas con vocabulario académico, razonamiento y justificación."}
-        </p>
+      )}
 
-        <div className="mt-4 grid gap-3">
+      <section className="tarjeta p-4">
+        <div className="mt-2 grid gap-3">
           <label className="grid gap-1.5">
             <span className="text-xs font-semibold text-muted-foreground">Grado</span>
             <select
@@ -96,7 +202,7 @@ function Inicio() {
               onChange={(e) => setGrado(e.target.value)}
               className="rounded-lg border border-input bg-card px-3 py-2.5 text-sm"
             >
-              {GRADOS[nivel].map((g) => (
+              {GRADOS.map((g) => (
                 <option key={g} value={g}>
                   {g}
                 </option>
