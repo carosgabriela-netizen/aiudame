@@ -150,6 +150,7 @@ function Inicio() {
     mutationFn: async () => {
       const resultado = await pedirPistas({ data: { grado, area, pregunta } });
       await supabase.from("consultas").insert({
+        nivel: "secundaria",
         grado,
         area,
         pregunta,
