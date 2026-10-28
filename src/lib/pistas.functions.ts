@@ -62,7 +62,7 @@ export const generarPistas = createServerFn({ method: "POST" })
       const { data: recursos } = await supabase
         .from("recursos_ministerio")
         .select("titulo, nivel, grado, area, fuente, contenido")
-        .in("nivel", [data.nivel, "ambos"])
+        .in("nivel", ["secundaria", "ambos"])
         .order("created_at", { ascending: false })
         .limit(12);
 
@@ -76,7 +76,7 @@ export const generarPistas = createServerFn({ method: "POST" })
       }
     }
 
-    const entradaUsuario = `Pregunta del estudiante (${data.nivel}, ${data.grado}, ${data.area}):\n"${data.pregunta}"\n\nRecursos curriculares del Ministerio disponibles:\n${contexto || "(Sin material cargado todavía: apóyate estrictamente en el Currículo Nacional del Perú y en el enfoque de materialeducativoperu.com para este grado y área.)"}\n\nDevuelve la respuesta en formato json con estrategia, pistas y pregunta_reflexion. Recuerda: pistas, nunca la respuesta.`;
+    const entradaUsuario = `Pregunta del estudiante (secundaria, ${data.grado}, ${data.area}):\n"${data.pregunta}"\n\nRecursos curriculares del Ministerio disponibles:\n${contexto || "(Sin material cargado todavía: apóyate estrictamente en el Currículo Nacional del Perú y en el enfoque de materialeducativoperu.com para este grado y área.)"}\n\nDevuelve la respuesta en formato json con estrategia, pistas y pregunta_reflexion. Recuerda: pistas, nunca la respuesta.`;
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
       method: "POST",
@@ -89,7 +89,7 @@ export const generarPistas = createServerFn({ method: "POST" })
         model: "openai/gpt-6-astra",
         stream: true,
         reasoning: { effort: "low", summary: "auto" },
-        instructions: instruccionesPor(data.nivel, data.grado, data.area),
+        instructions: instruccionesPor(data.grado, data.area),
         input: [{ role: "user", content: [{ type: "input_text", text: entradaUsuario }] }],
         text: {
           format: {
